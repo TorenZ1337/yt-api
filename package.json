@@ -1,0 +1,12 @@
+{
+  "name": "yt-latest-sawlties",
+  "version": "1.0.0",
+  "description": "Returns the latest YouTube video from @sawlties",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
