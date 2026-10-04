@@ -16,13 +16,21 @@ async function getChannelId() {
 
   const html = await response.text();
 
-  const match = html.match(/"channelId":"(UC[^"]+)"/);
+  const patterns = [
+    /<meta itemprop="channelId" content="(UC[^"]+)"/,
+    /"channelId":"(UC[^"]+)"/,
+    /"externalId":"(UC[^"]+)"/
+  ];
 
-  if (!match) {
-    throw new Error("Channel ID could not be found");
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+
+    if (match) {
+      return match[1];
+    }
   }
 
-  return match[1];
+  throw new Error("Channel ID could not be found");
 }
 
 app.get("/", async (req, res) => {
@@ -47,13 +55,13 @@ app.get("/", async (req, res) => {
       throw new Error("No video found");
     }
 
-    res.type("text").send(
-      `https://www.youtube.com/watch?v=${videoIdMatch[1]}`
-    );
+    res
+      .type("text")
+      .send(`https://www.youtube.com/watch?v=${videoIdMatch[1]}`);
 
   } catch (error) {
     console.error(error);
-    res.status(500).send("Error getting latest YouTube video");
+    res.status(500).send(error.message);
   }
 });
 
