@@ -1,70 +1,75 @@
-const express = require("express");
+export default {
+  async fetch(request) {
+    try {
+      const CHANNEL_HANDLE = "@sawlties";
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+      // YouTube-Kanalseite abrufen
+      const channelResponse = await fetch(
+        `https://www.youtube.com/${CHANNEL_HANDLE}`
+      );
 
-const CHANNEL_HANDLE = "@sawlties";
+      if (!channelResponse.ok) {
+        throw new Error(`YouTube returned ${channelResponse.status}`);
+      }
 
-async function getChannelId() {
-  const response = await fetch(
-    `https://www.youtube.com/${CHANNEL_HANDLE}`
-  );
+      const html = await channelResponse.text();
 
-  if (!response.ok) {
-    throw new Error(`YouTube returned ${response.status}`);
-  }
+      // Channel-ID finden
+      const patterns = [
+        /<meta itemprop="channelId" content="(UC[^"]+)"/,
+        /"channelId":"(UC[^"]+)"/,
+        /"externalId":"(UC[^"]+)"/
+      ];
 
-  const html = await response.text();
+      let channelId = null;
 
-  const patterns = [
-    /<meta itemprop="channelId" content="(UC[^"]+)"/,
-    /"channelId":"(UC[^"]+)"/,
-    /"externalId":"(UC[^"]+)"/
-  ];
+      for (const pattern of patterns) {
+        const match = html.match(pattern);
+        if (match) {
+          channelId = match[1];
+          break;
+        }
+      }
 
-  for (const pattern of patterns) {
-    const match = html.match(pattern);
+      if (!channelId) {
+        throw new Error("Channel ID could not be found");
+      }
 
-    if (match) {
-      return match[1];
+      // YouTube RSS Feed abrufen
+      const feedResponse = await fetch(
+        `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`
+      );
+
+      if (!feedResponse.ok) {
+        throw new Error(`YouTube RSS returned ${feedResponse.status}`);
+      }
+
+      const xml = await feedResponse.text();
+
+      const videoIdMatch = xml.match(
+        /<yt:videoId>([^<]+)<\/yt:videoId>/
+      );
+
+      if (!videoIdMatch) {
+        throw new Error("No video found");
+      }
+
+      return new Response(
+        `https://www.youtube.com/watch?v=${videoIdMatch[1]}`,
+        {
+          headers: {
+            "Content-Type": "text/plain; charset=UTF-8"
+          }
+        }
+      );
+
+    } catch (error) {
+      return new Response(error.message, {
+        status: 500,
+        headers: {
+          "Content-Type": "text/plain; charset=UTF-8"
+        }
+      });
     }
   }
-
-  throw new Error("Channel ID could not be found");
-}
-
-app.get("/", async (req, res) => {
-  try {
-    const channelId = await getChannelId();
-
-    const response = await fetch(
-      `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`
-    );
-
-    if (!response.ok) {
-      throw new Error(`YouTube RSS returned ${response.status}`);
-    }
-
-    const xml = await response.text();
-
-    const videoIdMatch = xml.match(
-      /<yt:videoId>([^<]+)<\/yt:videoId>/
-    );
-
-    if (!videoIdMatch) {
-      throw new Error("No video found");
-    }
-
-    res
-      .type("text")
-      .send(`https://www.youtube.com/watch?v=${videoIdMatch[1]}`);
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).send(error.message);
-  }
-});
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+};
