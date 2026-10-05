@@ -1,12 +1,13 @@
 {
-  "name": "yt-latest-sawlties",
+  "name": "yt-api",
   "version": "1.0.0",
-  "description": "Returns the latest YouTube video from @sawlties",
+  "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
   },
-  "dependencies": {
-    "express": "^4.21.2"
+  "devDependencies": {
+    "wrangler": "^4.0.0"
   }
 }
